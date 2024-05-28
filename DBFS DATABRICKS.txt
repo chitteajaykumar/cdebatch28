@@ -1,0 +1,114 @@
+********************************************************************
+%sql
+drop database if exists ajay_db cascade; 
+drop database if exists raja_db cascade;
+
+*********************************************************************
+%sql
+CREATE DATABASE IF NOT EXISTS ajay_db 
+LOCATION 'dbfs:/FileStore/tables/ajay.db';
+
+USE ajay_db;
+
+CREATE OR REPLACE TEMPORARY VIEW customer_lo_v 
+USING JSON
+OPTIONS (
+    path='dbfs:/FileStore/tables/customer_lo.json'
+);
+
+CREATE TABLE IF NOT EXISTS ajay_db.customer_lo
+USING PARQUET
+SELECT * FROM customer_lo_v;
+
+************************************************************************************
+CREATE DATABASE IF NOT EXISTS ajay_db 
+LOCATION 'dbfs:/FileStore/tables/ajay.db';
+
+USE ajay_db;
+
+CREATE OR REPLACE TEMPORARY VIEW customer_ny_v 
+USING JSON
+OPTIONS (
+    path='dbfs:/FileStore/tables/customer_ny.json'
+);
+
+CREATE TABLE IF NOT EXISTS ajay_db.customer_ny
+USING PARQUET
+SELECT * FROM customer_ny_v;
+
+************************************************************************************
+CREATE DATABASE IF NOT EXISTS ajay_db 
+LOCATION 'dbfs:/FileStore/tables/ajay.db';
+
+USE ajay_db;
+
+CREATE OR REPLACE TEMPORARY VIEW salesman_ny_v 
+USING JSON
+OPTIONS (
+    path='dbfs:/FileStore/tables/salesman_ny.json'
+);
+
+CREATE TABLE IF NOT EXISTS ajay_db.salesman_ny
+USING PARQUET
+SELECT * FROM salesman_ny_v;
+
+
+************************************************************************************
+CREATE DATABASE IF NOT EXISTS ajay_db 
+LOCATION 'dbfs:/FileStore/tables/ajay.db';
+
+USE ajay_db;
+
+CREATE OR REPLACE TEMPORARY VIEW salesman_lo_v 
+USING JSON
+OPTIONS (
+    path='dbfs:/FileStore/tables/salesman_lo.json'
+);
+
+CREATE TABLE IF NOT EXISTS ajay_db.salesman_lo
+USING PARQUET
+SELECT * FROM salesman_lo_v;
+
+
+
+************************************************************************************
+CREATE DATABASE IF NOT EXISTS ajay_db 
+LOCATION 'dbfs:/FileStore/tables/ajay.db';
+
+USE ajay_db;
+
+CREATE OR REPLACE TEMPORARY VIEW orders_v 
+USING JSON
+OPTIONS (
+    path='dbfs:/FileStore/tables/orders.json'
+);
+
+CREATE TABLE IF NOT EXISTS ajay_db.orders
+USING PARQUET
+SELECT * FROM orders_v;
+
+
+*********************************************************************************
+
+CREATE DATABASE IF NOT EXISTS raja_db 
+LOCATION 'dbfs:/FileStore/tables/raja.db';
+
+USE raja_db;
+
+
+CREATE TABLE IF NOT EXISTS raja_db.result_summary
+(
+name string,
+city string,
+tot_purch_amt decimal(10,2)
+)USING PARQUET;
+
+Insert Into raja_db.result_summary
+select sale.name,sale.city,sum(coalesce(purch_amt,0)) as tot_purch_amt from
+(select * from ajay_db.customer_lo union select * from ajay_db.customer_ny)cust
+left outer join ajay_db.orders order on cust.customer_id=order.customer_id
+left outer join (select * from ajay_db.salesman_lo union select * from ajay_db.salesman_ny)sale
+on sale.salesman_id=order.salesman_id
+group by 1,2
+order by 2,1;
+
