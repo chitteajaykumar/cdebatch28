@@ -1,0 +1,2 @@
+select * from movies_data_engineering_project;
+select employee_name,emp_id,salary from emp;
